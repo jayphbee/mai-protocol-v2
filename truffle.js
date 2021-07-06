@@ -1,7 +1,7 @@
 var PrivateKeyProvider = require('truffle-privatekey-provider');
 
 module.exports = {
-    migrations_directory: "migrations_empty",
+    migrations_directory: "migrations",
     networks: {
         development: {
             host: '127.0.0.1',
@@ -21,6 +21,16 @@ module.exports = {
             provider: () => new PrivateKeyProvider(process.env.PK, 'https://ropsten.infura.io'),
             network_id: 3,
             gasPrice: 10000000000
+        },
+        rinkeby: {
+            provider: () => new PrivateKeyProvider(process.env.PK, 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'),
+            network_id: 4,
+            gasPrice: 10000000000
+        },
+        arbrinkeby: {
+            provider: () => new PrivateKeyProvider(process.env.PK, 'https://rinkeby.arbitrum.io/rpc'),
+            network_id: '421611',
+            gasPrice: 10000000000,
         },
         soliditycoverage: {
             host: 'localhost',

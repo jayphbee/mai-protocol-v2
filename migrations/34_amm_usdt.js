@@ -12,7 +12,7 @@ module.exports = async function (deployer, network, accounts) {
     const proxy = await Proxy.deployed();
     const globalConfig = await GlobalConfig.deployed();
 
-    await deployer.deploy(AMM, globalConfig.address, proxy.address, priceFeeder.address, shareToken.address, { gas: 6900000 });
+    await deployer.deploy(AMM, globalConfig.address, proxy.address, priceFeeder.address, shareToken.address, { gas: 200000000 });
 
     const amm = await AMM.deployed();
     console.log('  「 Address summary 」--------------------------------------');

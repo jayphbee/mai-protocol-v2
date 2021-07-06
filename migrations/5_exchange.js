@@ -6,7 +6,7 @@ module.exports = async function (deployer, network, accounts) {
     const contractReader = await ContractReader.deployed();
     const globalConfig = await GlobalConfig.deployed();
 
-    await deployer.deploy(Exchange, globalConfig.address, { gas: 4000000 });
+    await deployer.deploy(Exchange, globalConfig.address, { gas: 200000000 });
     const exchange = await Exchange.deployed();
 
     console.log('  「 Address summary 」--------------------------------------');

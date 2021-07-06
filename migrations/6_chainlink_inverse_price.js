@@ -7,7 +7,7 @@ module.exports = async function (deployer, network, accounts) {
     await deployer.deploy(PriceFeeder);
     const priceFeeder = await PriceFeeder.deployed();
 
-    await deployer.deploy(ChainlinkAdapter, priceFeeder.address, 3600 * 6, true, { gas: 700000 });
+    await deployer.deploy(ChainlinkAdapter, priceFeeder.address, 3600 * 6, true, { gas: 200000000 });
     const chainlinkAdapter = await ChainlinkAdapter.deployed();
 
     console.log('  「 Address summary 」--------------------------------------');
