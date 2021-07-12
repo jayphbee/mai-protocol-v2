@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "2.5.0",
+    "@truffle/hdwallet-provider": "^1.4.1",
     "bignumber.js": "^7.2.1",
     "byzantine": "^1.1.0",
     "coveralls": "^3.0.6",

@@ -1,4 +1,6 @@
 var PrivateKeyProvider = require('truffle-privatekey-provider');
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+const m = "faith soccer decorate outer food symbol ramp pink sight armed mask clean"
 
 module.exports = {
     migrations_directory: "migrations",
@@ -7,8 +9,8 @@ module.exports = {
             host: '127.0.0.1',
             port: 8545,
             network_id: '*',
-            gas: 8000000,
-            gasPrice: 20000000000,
+            gas: 80000000,
+            gasPrice: 10000000000,
         },
         production: {
             provider: () => new PrivateKeyProvider(process.env.PK, 'https://mainnet.infura.io'),
@@ -16,6 +18,11 @@ module.exports = {
             gasPrice: 26000000000,
             gas: 8000000,
             confirmations: 2
+        },
+        localchain: {
+            provider: () => new HDWalletProvider(m, 'http://103.96.148.28:28545'),
+            network_id: '2021',
+            gasPrice: 10000000000,
         },
         ropsten: {
             provider: () => new PrivateKeyProvider(process.env.PK, 'https://ropsten.infura.io'),
