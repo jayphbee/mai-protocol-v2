@@ -26,6 +26,8 @@ library LibTypes {
         int256 makerDevFeeRate;
         uint256 lotSize;
         uint256 tradingLotSize;
+        int256 referrerBonusRate;
+        int256 referreeFeeDisconut;
     }
 
     struct MarginAccount {

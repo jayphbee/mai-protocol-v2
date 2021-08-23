@@ -20,6 +20,9 @@ contract Exchange {
 
     IGlobalConfig public globalConfig;
 
+    // referrals
+    mapping(address => address) private referrals;
+
     // order status
     mapping(bytes32 => uint256) public filled;
     mapping(bytes32 => bool) public cancelled;
@@ -32,6 +35,7 @@ contract Exchange {
     );
     event MatchWithAMM(address perpetual, LibOrder.OrderParam takerOrderParam, uint256 amount);
     event Cancel(bytes32 indexed orderHash);
+    event ActivateReferral(address indexed referrer, address indexed referree);
 
     constructor(address _globalConfig) public {
         globalConfig = IGlobalConfig(_globalConfig);
@@ -158,6 +162,26 @@ contract Exchange {
     }
 
     /**
+     * activate referral relationship
+     */
+    function activateReferral(address referral) external {
+        referrals[msg.sender] = referral;
+        emit ActivateReferral(referral, msg.sender);
+    }
+
+    /**
+     * check if trader has activated for this perpetual market
+     */
+    function getReferral(address trader) internal view returns (address) {
+        return referrals[trader];
+    }
+
+    function isActivtedReferral(address trader) internal view returns (bool) {
+        return referrals[trader] != address(0);
+    }
+
+
+    /**
      * @dev Get current chain id. need istanbul hardfork.
      *
      * @return Current chain id.
@@ -192,15 +216,40 @@ contract Exchange {
             amount
         );
 
-        // trading fee
-        int256 takerTradingFee = amount.wmul(price).toInt256().wmul(takerOrderParam.takerFeeRate());
-        claimTradingFee(perpetual, takerOrderParam.trader, takerTradingFee);
-        int256 makerTradingFee = amount.wmul(price).toInt256().wmul(makerOrderParam.makerFeeRate());
-        claimTradingFee(perpetual, makerOrderParam.trader, makerTradingFee);
+        int256 referrerBonusRate = perpetual.getGovernance().referrerBonusRate;
+        int256 referreeFeeDiscount = perpetual.getGovernance().referreeFeeDisconut;
+
+        int256 takerTradingFee;
+        int256 makerTradingFee;
+
+        // check if taker is activated
+        if (isActivtedReferral(takerOrderParam.trader)) {
+            // taker trading fee
+            takerTradingFee = amount.wmul(price).toInt256().wmul(takerOrderParam.takerFeeRate()).wmul(referreeFeeDiscount);
+            claimTradingFee(perpetual, takerOrderParam.trader, takerTradingFee.wmul(LibMathSigned.WAD().sub(referrerBonusRate)));
+            // referral bonus
+            claimReferralBonus(perpetual, takerOrderParam.trader, takerTradingFee.wmul(referrerBonusRate));
+        } else {
+            takerTradingFee = amount.wmul(price).toInt256().wmul(takerOrderParam.takerFeeRate());
+            claimTradingFee(perpetual, takerOrderParam.trader, takerTradingFee);
+        }
+
+        // check if maker is activated
+        if (isActivtedReferral(makerOrderParam.trader)) {
+            // maker trading fee
+            makerTradingFee = amount.wmul(price).toInt256().wmul(makerOrderParam.makerFeeRate()).wmul(referreeFeeDiscount);
+            claimTradingFee(perpetual, makerOrderParam.trader, makerTradingFee.wmul(LibMathSigned.WAD().sub(referrerBonusRate)));
+            // referral bonus
+            claimReferralBonus(perpetual, makerOrderParam.trader, makerTradingFee.wmul(referrerBonusRate));
+        } else {
+            makerTradingFee = amount.wmul(price).toInt256().wmul(makerOrderParam.makerFeeRate());
+            claimTradingFee(perpetual, makerOrderParam.trader, makerTradingFee);
+        }
 
         // dev fee
         claimTakerDevFee(perpetual, takerOrderParam.trader, price, takerOpened, amount.sub(takerOpened));
         claimMakerDevFee(perpetual, makerOrderParam.trader, price, makerOpened, amount.sub(makerOpened));
+
         if (makerOpened > 0) {
             require(perpetual.isIMSafe(makerOrderParam.trader), "maker initial margin unsafe");
         } else {
@@ -277,6 +326,21 @@ contract Exchange {
         }
     }
 
+   /**
+    * clac referral bonus
+    */
+    function claimReferralBonus(
+        IPerpetual perpetual,
+        address trader,
+        int256 fee
+    )
+        internal
+    {
+        address referral = getReferral(trader);
+        if (referral != address(0) && fee > 0) {
+            perpetual.transferCashBalance(trader, referral, fee.toUint256());
+        }
+    }
 
     /**
      * @dev Claim dev fee. Especially, for fee from closing positon
