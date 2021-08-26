@@ -88,6 +88,9 @@ contract Exchange {
 
             uint256 opened = fillOrder(perpetual, takerOrderParam, makerOrderParams[i], amounts[i]);
 
+            // update fair price
+            perpetual.setFairPrice(makerOrderParams[i].getPrice());
+
             takerOpened = takerOpened.add(opened);
             filled[makerOrderHash] = makerFilledAmount.add(amounts[i]);
             takerFilledAmount = takerFilledAmount.add(amounts[i]);

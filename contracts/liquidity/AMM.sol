@@ -15,6 +15,7 @@ contract AMM is AMMGovernance {
     using LibMathUnsigned for uint256;
 
     int256 private constant FUNDING_PERIOD = 28800; // 8 * 3600;
+    uint256 private _fairPrice;
 
     // ERC20 token
     ShareToken private shareToken;
@@ -90,8 +91,7 @@ contract AMM is AMMGovernance {
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastFairPrice() internal view returns (uint256) {
-        LibTypes.MarginAccount memory account = perpetualProxy.getMarginAccount(tradingAccount());
-        return fairPriceFromPoolAccount(account);
+        return fairPriceFromPoolAccount();
     }
 
     /**
@@ -101,8 +101,7 @@ contract AMM is AMMGovernance {
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastPremium() internal view returns (int256) {
-        LibTypes.MarginAccount memory account = perpetualProxy.getMarginAccount(tradingAccount());
-        return premiumFromPoolAccount(account);
+        return premiumFromPoolAccount();
     }
 
     /**
@@ -714,18 +713,20 @@ contract AMM is AMMGovernance {
     /**
      * @notice a gas-optimized version of lastFairPrice
      */
-    function fairPriceFromPoolAccount(LibTypes.MarginAccount memory account) internal view returns (uint256) {
-        uint256 y = account.size;
-        require(y > 0, "funding initialization required");
-        uint256 x = availableMarginFromPoolAccount(account);
-        return x.wdiv(y);
+    function fairPriceFromPoolAccount() internal view returns (uint256) {
+        return _fairPrice;
+    }
+
+    function setFairPrice(uint256 price) external onlyAuthorized {
+        _fairPrice = price;
+        funding();
     }
 
     /**
      * @notice a gas-optimized version of lastPremium
      */
-    function premiumFromPoolAccount(LibTypes.MarginAccount memory account) internal view returns (int256) {
-        int256 p = fairPriceFromPoolAccount(account).toInt256();
+    function premiumFromPoolAccount() internal view returns (int256) {
+        int256 p = fairPriceFromPoolAccount().toInt256();
         p = p.sub(fundingState.lastIndexPrice.toInt256());
         return p;
     }
@@ -841,18 +842,12 @@ contract AMM is AMMGovernance {
             // funding initialization required. but in this case, it's safe to just do nothing and return
             return;
         }
-        LibTypes.MarginAccount memory account = perpetualProxy.getMarginAccount(tradingAccount());
-        if (account.size == 0) {
-            // empty pool. it's safe to just do nothing and return
-            return;
-        }
-
         if (newIndexTimestamp > fundingState.lastFundingTime) {
             // the 1st update
-            nextStateWithTimespan(account, newIndexPrice, newIndexTimestamp);
+            nextStateWithTimespan(newIndexPrice, newIndexTimestamp);
         }
         // the 2nd update;
-        nextStateWithTimespan(account, newIndexPrice, blockTime);
+        nextStateWithTimespan(newIndexPrice, blockTime);
 
         emit UpdateFundingRate(fundingState);
     }
@@ -863,12 +858,10 @@ contract AMM is AMMGovernance {
      * This function also adds Acc / (8*3600) into accumulatedFundingPerContract, where Acc is accumulated
      * funding payment per position since lastFundingTime
      *
-     * @param account The pool account.
      * @param newIndexPrice New index price.
      * @param endTimestamp The given end time.
      */
     function nextStateWithTimespan(
-        LibTypes.MarginAccount memory account,
         uint256 newIndexPrice,
         uint256 endTimestamp
     ) private {
@@ -893,7 +886,7 @@ contract AMM is AMMGovernance {
 
         // always update
         fundingState.lastIndexPrice = newIndexPrice; // should update before premium()
-        fundingState.lastPremium = premiumFromPoolAccount(account);
+        fundingState.lastPremium = premiumFromPoolAccount();
     }
 
     /**

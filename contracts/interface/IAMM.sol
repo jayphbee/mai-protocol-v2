@@ -87,4 +87,6 @@ interface IAMM {
     ) external;
 
     function depositAndAddLiquidity(uint256 depositAmount, uint256 amount) external payable;
+
+    function setFairPrice(uint256 price) external;
 }

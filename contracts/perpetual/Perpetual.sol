@@ -537,4 +537,8 @@ contract Perpetual is MarginAccount, ReentrancyGuard {
         marginAccounts[trader] = account;
         emit UpdatePositionAccount(trader, account, totalSize(originalSide), currentMarkPrice);
     }
+
+    function setFairPrice(uint256 price) public onlyAuthorized  {
+        amm.setFairPrice(price);
+    }
 }
