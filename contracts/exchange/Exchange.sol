@@ -125,6 +125,8 @@ contract Exchange {
      * activate referral relationship
      */
     function activateReferral(address referral) external {
+        require(msg.sender != referral, "refer self");
+        require(referrals[msg.sender] == address(0), "already activated");
         referrals[msg.sender] = referral;
         emit ActivateReferral(referral, msg.sender);
     }
