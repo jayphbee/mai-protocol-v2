@@ -65,15 +65,6 @@ contract('TestPerpGovernance', accounts => {
     describe("exceptions", async () => {
         before(deploy);
 
-        it("amm required", async () => {
-            try {
-                await governance.testAmmRequired();
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("no automated market maker"), error);
-            }
-        });
-
         it("setGovernanceParameter exceptions", async () => {
             try {
                 await governance.setGovernanceParameter(toBytes32("initialMarginRate"), 0);

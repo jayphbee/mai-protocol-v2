@@ -16,12 +16,6 @@ contract PerpetualGovernance is PerpetualStorage {
         globalConfig = IGlobalConfig(_globalConfig);
     }
 
-    // Check if amm address is set.
-    modifier ammRequired() {
-        require(address(amm) != address(0), "no automated market maker");
-        _;
-    }
-
     // Check if sender is owner.
     modifier onlyOwner() {
         require(globalConfig.owner() == msg.sender, "not owner");

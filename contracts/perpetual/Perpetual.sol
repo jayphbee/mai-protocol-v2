@@ -269,7 +269,7 @@ contract Perpetual is MarginAccount, ReentrancyGuard {
      *
      * @return Mark price.
      */
-    function markPrice() public ammRequired returns (uint256) {
+    function markPrice() public returns (uint256) {
         return status == LibTypes.Status.NORMAL ? amm.currentMarkPrice() : settlementPrice;
     }
 

@@ -12,9 +12,9 @@ import "./TestPerpetual.sol";
 contract TestAMM is AMM {
     uint256 public mockBlockTimestamp;
 
-    constructor(address _globalConfig, address _perpetualProxy, address _priceFeeder, address token)
+    constructor(address _globalConfig, address _perpetualProxy, address _priceFeeder)
         public
-        AMM(_globalConfig, _perpetualProxy, _priceFeeder, token)
+        AMM(_globalConfig, _perpetualProxy, _priceFeeder)
     {
         // solium-disable-next-line security/no-block-members
         mockBlockTimestamp = block.timestamp;

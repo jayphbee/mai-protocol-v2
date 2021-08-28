@@ -14,7 +14,6 @@ contract ContractReader {
 
     struct PerpetualStorage {
         address collateralTokenAddress;
-        address shareTokenAddress;
         uint256 totalSize;
         int256 insuranceFundBalance;
         int256 longSocialLossPerContract;
@@ -40,7 +39,6 @@ contract ContractReader {
     function getPerpetualStorage(address perpetualAddress) public view returns (PerpetualStorage memory params) {
         IPerpetual perpetual = IPerpetual(perpetualAddress);
         params.collateralTokenAddress = address(perpetual.collateral());
-        params.shareTokenAddress = address(perpetual.amm().shareTokenAddress());
 
         params.totalSize = perpetual.totalSize(LibTypes.Side.LONG);
         params.insuranceFundBalance = perpetual.insuranceFundBalance();
@@ -89,7 +87,6 @@ contract ContractReader {
     function getBetaPerpetualStorage(address perpetualAddress) public view returns (PerpetualStorage memory params) {
         IPerpetual perpetual = IPerpetual(perpetualAddress);
         params.collateralTokenAddress = address(perpetual.collateral());
-        params.shareTokenAddress = address(perpetual.amm().shareTokenAddress());
 
         params.totalSize = perpetual.totalSize(LibTypes.Side.LONG);
         params.insuranceFundBalance = perpetual.insuranceFundBalance();

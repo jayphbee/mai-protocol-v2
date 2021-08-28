@@ -108,49 +108,6 @@ contract Exchange {
     }
 
     /**
-     * @dev Match orders from taker with amm. It is exactly same with directly trading from amm.
-     *
-     * @param takerOrderParam  Taker's order to match.
-     * @param _perpetual        Address of perpetual contract.
-     * @param amount           Amount to fiil.
-     * @return Opened position amount of taker.
-     */
-    function matchOrderWithAMM(
-        LibOrder.OrderParam memory takerOrderParam,
-        address _perpetual,
-        uint256 amount
-    ) public {
-        require(globalConfig.brokers(msg.sender), "unauthorized broker");
-        require(amount > 0, "amount must be greater than 0");
-        require(!takerOrderParam.isMakerOnly(), "taker order is maker only");
-
-        IPerpetual perpetual = IPerpetual(_perpetual);
-        IAMM amm = IAMM(perpetual.amm());
-
-        bytes32 takerOrderHash = validateOrderParam(perpetual, takerOrderParam);
-        uint256 takerFilledAmount = filled[takerOrderHash];
-        require(amount <= takerOrderParam.amount.sub(takerFilledAmount), "taker overfilled");
-
-        // trading with pool
-        uint256 takerOpened;
-        uint256 price = takerOrderParam.getPrice();
-        uint256 expired = takerOrderParam.expiredAt();
-        if (takerOrderParam.isSell()) {
-            takerOpened = amm.sellFromWhitelisted(
-                takerOrderParam.trader,
-                amount,
-                price,
-                expired
-            );
-        } else {
-            takerOpened = amm.buyFromWhitelisted(takerOrderParam.trader, amount, price, expired);
-        }
-        filled[takerOrderHash] = filled[takerOrderHash].add(amount);
-
-        emit MatchWithAMM(_perpetual, takerOrderParam, amount);
-    }
-
-    /**
      * @dev Cancel order.
      *
      * @param order Order to cancel.

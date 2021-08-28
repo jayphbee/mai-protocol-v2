@@ -6,7 +6,6 @@ import {LibMathSigned, LibMathUnsigned} from "../lib/LibMath.sol";
 import "../lib/LibTypes.sol";
 import "../interface/IPriceFeeder.sol";
 import "../interface/IPerpetual.sol";
-import "../token/ShareToken.sol";
 import "./AMMGovernance.sol";
 
 
@@ -17,26 +16,18 @@ contract AMM is AMMGovernance {
     int256 private constant FUNDING_PERIOD = 28800; // 8 * 3600;
     uint256 public _fairPrice;
 
-    // ERC20 token
-    ShareToken private shareToken;
-
-    event CreateAMM();
     event UpdateFundingRate(LibTypes.FundingState fundingState);
 
     constructor(
         address _globalConfig,
         address _perpetualProxy,
-        address _priceFeeder,
-        address _shareToken
+        address _priceFeeder
     )
         public
         AMMGovernance(_globalConfig)
     {
         priceFeeder = IPriceFeeder(_priceFeeder);
         perpetualProxy = IPerpetual(_perpetualProxy);
-        shareToken = ShareToken(_shareToken);
-
-        emit CreateAMM();
     }
 
     /**
@@ -66,7 +57,7 @@ contract AMM is AMMGovernance {
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastFairPrice() internal view returns (uint256) {
-        return fairPriceFromPoolAccount();
+        return _fairPrice;
     }
 
     /**
@@ -76,7 +67,7 @@ contract AMM is AMMGovernance {
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastPremium() internal view returns (int256) {
-        return premiumFromPoolAccount();
+        return premium();
     }
 
     /**
@@ -207,14 +198,6 @@ contract AMM is AMMGovernance {
         return fundingState.accumulatedFundingPerContract;
     }
 
-    /**
-     * @notice The 1st addLiquidity.
-     *
-     * The semantics of this function is almost identical to addLiquidity except that the trading price
-     * is not determined by fairPrice, but by indexPrice.
-     *
-     * Note: buy() and sell() will fail before this function is called.
-     */
     function initFunding() public {
         require(perpetualProxy.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
 
@@ -225,20 +208,6 @@ contract AMM is AMMGovernance {
 
         initFunding(newIndexPrice, blockTime);
         forceFunding();
-    }
-
-    /**
-     * @notice Any ETH address can call this function to update the index price of this AMM and get some prize.
-     */
-    function updateIndex() public {
-        require(perpetualProxy.status() == LibTypes.Status.NORMAL, "wrong perpetual status");
-        uint256 oldIndexPrice = fundingState.lastIndexPrice;
-        forceFunding();
-        address devAddress = perpetualProxy.devAddress();
-        if (oldIndexPrice != fundingState.lastIndexPrice) {
-            perpetualProxy.transferCashBalance(devAddress, msg.sender, governance.updatePremiumPrize);
-            require(perpetualProxy.isSafe(devAddress), "dev unsafe");
-        }
     }
 
     // Internal helpers
@@ -266,8 +235,8 @@ contract AMM is AMMGovernance {
     /**
      * @notice a gas-optimized version of lastPremium
      */
-    function premiumFromPoolAccount() internal view returns (int256) {
-        int256 p = fairPriceFromPoolAccount().toInt256();
+    function premium() internal view returns (int256) {
+        int256 p = _fairPrice.toInt256();
         p = p.sub(fundingState.lastIndexPrice.toInt256());
         return p;
     }
@@ -390,7 +359,7 @@ contract AMM is AMMGovernance {
 
         // always update
         fundingState.lastIndexPrice = newIndexPrice; // should update before premium()
-        fundingState.lastPremium = premiumFromPoolAccount();
+        fundingState.lastPremium = premium();
     }
 
     /**

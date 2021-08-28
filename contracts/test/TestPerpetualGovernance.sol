@@ -11,10 +11,6 @@ contract TestPerpGovernance is PerpetualGovernance {
         PerpetualGovernance(_globalConfig) 
     {
     } 
-
-    function testAmmRequired() public view ammRequired returns (uint256) {
-        return 1;
-    }
 }
 
 

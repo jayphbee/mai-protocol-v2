@@ -49,11 +49,7 @@ contract AMMGovernance {
      * @param value Value of parameter.
      */
     function setGovernanceParameter(bytes32 key, int256 value) public onlyOwner {
-        if (key == "poolFeeRate") {
-            governance.poolFeeRate = value.toUint256();
-        } else if (key == "poolDevFeeRate") {
-            governance.poolDevFeeRate = value.toUint256();
-        } else if (key == "emaAlpha") {
+        if (key == "emaAlpha") {
             require(value > 0, "alpha should be > 0");
             require(value <= 10**18, "alpha should be <= 1");
             governance.emaAlpha = value;
