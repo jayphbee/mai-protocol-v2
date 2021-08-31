@@ -23,7 +23,6 @@ const GlobalConfig = artifacts.require('perpetual/GlobalConfig.sol');
 const Perpetual = artifacts.require('test/TestPerpetual.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 
 const gasLimit = 8000000;
 
@@ -34,7 +33,6 @@ contract('amm', accounts => {
     let perpetual;
     let proxy;
     let amm;
-    let share;
 
     const broker = accounts[9];
     const admin = accounts[0];
@@ -64,7 +62,6 @@ contract('amm', accounts => {
     const deploy = async () => {
         priceFeeder = await PriceFeeder.new();
         collateral = await TestToken.new("TT", "TestToken", 18);
-        share = await ShareToken.new("ST", "STK", 18);
         globalConfig = await GlobalConfig.new();
         perpetual = await Perpetual.new(
             globalConfig.address,
@@ -73,9 +70,7 @@ contract('amm', accounts => {
             18
         );
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
 
         await perpetual.setGovernanceAddress(toBytes32("amm"), amm.address);
         await globalConfig.addComponent(perpetual.address, proxy.address);
@@ -196,7 +191,6 @@ contract('amm', accounts => {
         assert.equal(await positionSide(u2), Side.LONG);
 
         assert.equal(fromWad(await cashBalanceOf(u2)), '6883.333333333333333333');
-        assert.equal(fromWad(await share.balanceOf(u2)), 0);
         assert.equal(fromWad(await positionEntryValue(u2)), '7777.777777777777777778'); // trade price * position
         assert.equal(fromWad(await perpetual.pnl.call(u2)), '-777.777777777777777779');
 

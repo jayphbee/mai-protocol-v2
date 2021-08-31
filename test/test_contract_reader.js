@@ -10,7 +10,6 @@ const Perpetual = artifacts.require('perpetual/Perpetual.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
 const ContractReader = artifacts.require('reader/ContractReader.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 
 contract('contractReader', accounts => {
     let priceFeeder;
@@ -20,7 +19,6 @@ contract('contractReader', accounts => {
     let proxy;
     let amm;
     let contractReader;
-    let share;
 
     const broker = accounts[9];
     const admin = accounts[0];
@@ -43,7 +41,6 @@ contract('contractReader', accounts => {
 
     const deploy = async () => {
         priceFeeder = await PriceFeeder.new();
-        share = await ShareToken.new("ST", "STK", 18);
         collateral = await TestToken.new("TT", "TestToken", 18);
         globalConfig = await GlobalConfig.new();
         perpetual = await Perpetual.new(
@@ -53,9 +50,7 @@ contract('contractReader', accounts => {
             18
         );
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
 
         await perpetual.setGovernanceAddress(toBytes32("amm"), amm.address);
         await globalConfig.addComponent(perpetual.address, proxy.address);
@@ -82,8 +77,6 @@ contract('contractReader', accounts => {
     };
 
     const usePoolDefaultParameters = async () => {
-        await amm.setGovernanceParameter(toBytes32("poolFeeRate"), toWad(0.01));
-        await amm.setGovernanceParameter(toBytes32("poolDevFeeRate"), toWad(0.005));
         await amm.setGovernanceParameter(toBytes32("updatePremiumPrize"), toWad(0));
         await amm.setGovernanceParameter(toBytes32('emaAlpha'), '3327787021630616'); // 2 / (600 + 1)
         await amm.setGovernanceParameter(toBytes32('markPremiumLimit'), toWad(0.005));
@@ -146,7 +139,6 @@ contract('contractReader', accounts => {
         assert.equal(fromWad(p.fundingParams.lastEMAPremium), 0);
         assert.equal(fromWad(p.fundingParams.lastIndexPrice), 7000);
         assert.equal(fromWad(p.fundingParams.accumulatedFundingPerContract), 0);
-        assert.equal(p.shareTokenAddress, share.address);
         assert.notEqual(fromWad(p.oracleTime), 0);
         assert.equal(fromWad(p.oraclePrice), 7000);
 

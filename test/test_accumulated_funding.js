@@ -8,7 +8,6 @@ const GlobalConfig = artifacts.require('global/GlobalConfig.sol');
 const Perpetual = artifacts.require('test/TestPerpetual.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 
 contract('AccumulatedFunding', accounts => {
 
@@ -18,13 +17,11 @@ contract('AccumulatedFunding', accounts => {
     let perpetual;
     let proxy;
     let amm;
-    let share;
 
     const dev = accounts[1];
 
     const deploy = async () => {
         priceFeeder = await PriceFeeder.new();
-        share = await ShareToken.new("ST", "STK", 18);
         collateral = await TestToken.new("TT", "TestToken", 18);
         globalConfig = await GlobalConfig.new();
         perpetual = await Perpetual.new(
@@ -34,9 +31,7 @@ contract('AccumulatedFunding', accounts => {
             18
         );
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
 
         await amm.setGovernanceParameter(toBytes32('emaAlpha'), '3327787021630616'); // 2 / (600 + 1)
         await amm.setGovernanceParameter(toBytes32('markPremiumLimit'), '5000000000000000'); // 0.5%

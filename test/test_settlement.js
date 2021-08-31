@@ -22,7 +22,6 @@ const GlobalConfig = artifacts.require('perpetual/GlobalConfig.sol');
 const Perpetual = artifacts.require('test/TestPerpetual.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 
 const gasLimit = 8000000;
 
@@ -33,7 +32,6 @@ contract('settlement', accounts => {
     let perpetual;
     let proxy;
     let amm;
-    let share;
 
     const broker = accounts[9];
     const admin = accounts[0];
@@ -61,7 +59,6 @@ contract('settlement', accounts => {
     const deploy = async () => {
         priceFeeder = await PriceFeeder.new();
         collateral = await TestToken.new("TT", "TestToken", 18);
-        share = await ShareToken.new("ST", "STK", 18);
         globalConfig = await GlobalConfig.new();
         perpetual = await Perpetual.new(
             globalConfig.address,
@@ -70,9 +67,7 @@ contract('settlement', accounts => {
             18
         );
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
 
         await perpetual.setGovernanceAddress(toBytes32("amm"), amm.address);
         await globalConfig.addComponent(perpetual.address, proxy.address);

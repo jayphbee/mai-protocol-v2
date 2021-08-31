@@ -10,7 +10,6 @@ const GlobalConfig = artifacts.require('perpetual/GlobalConfig.sol');
 const Exchange = artifacts.require('exchange/Exchange.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 const PriceFeeder = artifacts.require('test/TestPriceFeeder.sol');
 
 contract('exchange-user-reverse', accounts => {
@@ -26,7 +25,6 @@ contract('exchange-user-reverse', accounts => {
     let exchange;
     let proxy;
     let amm;
-    let share;
 
     const broker = accounts[9];
     const admin = accounts[0];
@@ -58,11 +56,8 @@ contract('exchange-user-reverse', accounts => {
             collateral.address,
             cDecimals
         );
-        share = await ShareToken.new("ST", "STK", 18);
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
         await perpetual.setGovernanceAddress(toBytes32("amm"), funding.address);
 
         await globalConfig.addBroker(admin);

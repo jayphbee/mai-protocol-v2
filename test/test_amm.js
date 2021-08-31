@@ -23,7 +23,6 @@ const GlobalConfig = artifacts.require('global/GlobalConfig.sol');
 const Perpetual = artifacts.require('test/TestPerpetual.sol');
 const AMM = artifacts.require('test/TestAMM.sol');
 const Proxy = artifacts.require('proxy/Proxy.sol');
-const ShareToken = artifacts.require('token/ShareToken.sol');
 
 const gasLimit = 8000000;
 
@@ -64,7 +63,6 @@ contract('amm', accounts => {
     const deploy = async () => {
         priceFeeder = await PriceFeeder.new();
         collateral = await TestToken.new("TT", "TestToken", 18);
-        share = await ShareToken.new("ST", "STK", 18);
         globalConfig = await GlobalConfig.new();
         perpetual = await Perpetual.new(
             globalConfig.address,
@@ -73,9 +71,7 @@ contract('amm', accounts => {
             18
         );
         proxy = await Proxy.new(perpetual.address);
-        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address, share.address);
-        await share.addMinter(amm.address);
-        await share.renounceMinter();
+        amm = await AMM.new(globalConfig.address, proxy.address, priceFeeder.address);
 
         await perpetual.setGovernanceAddress(toBytes32("amm"), amm.address);
         await globalConfig.addComponent(perpetual.address, proxy.address);
@@ -322,7 +318,6 @@ contract('amm', accounts => {
 
             // position
             assert.equal(fromWad(await amm.positionSize()), 1);
-            assert.equal(fromWad(await share.totalSupply()), 1);
             assert.equal(fromWad(await amm.currentAvailableMargin.call()), 7000 * 1);
             assert.equal(fromWad(await positionSize(u1)), 1);
             assert.equal(fromWad(await positionSize(proxy.address)), 1); // amm.y
@@ -346,10 +341,6 @@ contract('amm', accounts => {
             assert.equal(fromWad(await perpetual.positionMargin.call(proxy.address)), 700);
             assert.equal(fromWad(await perpetual.maintenanceMargin.call(u1)), 350);
             assert.equal(fromWad(await perpetual.maintenanceMargin.call(proxy.address)), 350);
-
-            // share
-            assert.equal(fromWad(await share.balanceOf(u1)), 1);
-            assert.equal(fromWad(await share.balanceOf(proxy.address)), 0);
 
             // funding
             const fundingState = await amm.currentFundingState.call();
@@ -415,174 +406,6 @@ contract('amm', accounts => {
             await amm.createPool(toWad(10), {
                 from: u1
             });
-        });
-
-        it("removeLiquidity - no position on removing liqudity", async () => {
-            await perpetual.deposit(toWad(7000 * 3), {
-                from: u2
-            });
-            await amm.addLiquidity(toWad(1), {
-                from: u2
-            });
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), 7000);
-            assert.equal(fromWad(await share.balanceOf(u2)), 1);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 7000);
-
-            // price == 7700
-            await amm.buy(toWad(1), toWad('10000'), infinity, {
-                from: u2
-            });
-            assert.equal(fromWad(await cashBalanceOf(u2)), 6184.5 - 1e-18); //7000 - 700 - 115.5
-            assert.equal(fromWad(await share.balanceOf(u2)), 1);
-            assert.equal(fromWad(await positionSize(u2)), 0);
-            assert.equal(await positionSide(u2), Side.FLAT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 0); // trade price * position
-
-            await share.approve(amm.address, infinity, {
-                from: u2
-            });
-            await amm.removeLiquidity(toWad(1), {
-                from: u2
-            });
-
-            // price == 8477.7 * amount == 7707
-            assert.equal(fromWad(await cashBalanceOf(u2)), 6184.5 + 15414);
-            assert.equal(fromWad(await share.balanceOf(u2)), 0);
-            assert.equal(fromWad(await positionSize(u2)), "0.909090909090909091");
-            assert.equal(await positionSide(u2), Side.LONG);
-            assert.equal(fromWad(await positionEntryValue(u2)), 7707);
-        });
-
-        it("removeLiquidity - transfer share", async () => {
-            await perpetual.deposit(toWad(7000 * 3), { from: u2 });
-            await amm.addLiquidity(toWad(1), { from: u2 });
-
-            await perpetual.deposit(toWad(7000 * 3), { from: u3 });
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), 7000);
-            assert.equal(fromWad(await share.balanceOf(u2)), 1);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 7000);
-
-            // price == 7000
-            await share.transfer(u3, toWad(1), {
-                from: u2
-            });
-            assert.equal(await share.balanceOf(u2), toWad(0));
-            assert.equal(await share.balanceOf(u3), toWad(1));
-
-            try {
-                await amm.removeLiquidity(toWad(1), { from: u2 });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("shareBalance too low"));
-            }
-
-            // price == 7000 * amount == 0
-            await amm.removeLiquidity(toWad(1), { from: u3 });
-            assert.equal(fromWad(await cashBalanceOf(u3)), 21000 + 14000);
-            assert.equal(fromWad(await share.balanceOf(u3)), 0);
-            assert.equal(fromWad(await positionSize(u3)), 1);
-            assert.equal(await positionSide(u3), Side.LONG);
-            assert.equal(fromWad(await positionEntryValue(u3)), 7000);
-        });
-
-        it("removeLiquidity - success", async () => {
-            await perpetual.deposit(toWad(7000 * 3), {
-                from: u2
-            });
-            await amm.addLiquidity(toWad(1), {
-                from: u2
-            });
-            await share.approve(amm.address, infinity, {
-                from: u2
-            });
-
-            await amm.removeLiquidity(toWad(1), {
-                from: u2
-            });
-            assert.equal(fromWad(await cashBalanceOf(u2)), 7000 * 3);
-            assert.equal(fromWad(await share.balanceOf(u2)), 0);
-            assert.equal(fromWad(await positionSize(u2)), 0);
-            assert.equal(await positionSide(u2), Side.FLAT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 0);
-
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), 140000);
-            assert.equal(fromWad(await positionSize(proxy.address)), 10);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), 70000);
-        });
-
-        it("buy - success", async () => {
-            // buy 1, entryPrice will be 70000 / (10 - 1) = 7777 but markPrice is still 7000
-            // pnl = -777, positionMargin = 700
-
-            await perpetual.deposit(toWad(7000 * 1), {
-                from: u2
-            });
-            await amm.buy(toWad(1), toWad('10000'), infinity, {
-                from: u2
-            });
-
-            // await inspect(u1);
-            // await inspect(u2);
-            // await inspect(proxy.address);
-            // await printFunding();
-
-            assert.equal(fromWad(await amm.positionSize()), 9);
-            assert.equal(fromWad(await positionSize(proxy.address)), 9);
-            assert.equal(fromWad(await positionSize(u1)), 10);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u1), Side.SHORT);
-            assert.equal(await positionSide(u2), Side.LONG);
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), '6883.333333333333333333');
-            assert.equal(fromWad(await share.balanceOf(u2)), 0);
-            assert.equal(fromWad(await positionEntryValue(u2)), '7777.777777777777777778'); // trade price * position
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), '-777.777777777777777779');
-
-            assert.equal(fromWad(await amm.currentAvailableMargin.call()), '77855.555555555555555555'); // amm.x
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), '140855.555555555555555555');
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), '63000');
-            assert.equal(fromWad(await amm.currentFairPrice.call()), '8650.617283950617283951');
-        });
-
-        it("buyAndWithdraw - success", async () => {
-            // buy 1, entryPrice will be 70000 / (10 - 1) = 7777 but markPrice is still 7000
-            // pnl = -777, positionMargin = 700
-
-            await perpetual.deposit(toWad(7000 * 2), { from: u2 });
-            await amm.buyAndWithdraw(toWad(1), toWad('10000'), infinity, toWad(7000), { from: u2 });
-            // await inspect(u1);
-            // await inspect(u2);
-            // await inspect(proxy.address);
-            // await printFunding();
-
-            assert.equal(fromWad(await amm.positionSize()), 9);
-            assert.equal(fromWad(await positionSize(proxy.address)), 9);
-            assert.equal(fromWad(await positionSize(u1)), 10);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u1), Side.SHORT);
-            assert.equal(await positionSide(u2), Side.LONG);
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), '6105.555555555555555554'); // -7777.777777777777777777
-            assert.equal(fromWad(await share.balanceOf(u2)), 0);
-            assert.equal(fromWad(await positionEntryValue(u2)), '7000'); // trade price * position
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), '0');
-        });
-
-        it("buyAndWithdraw - success", async () => {
-            await perpetual.deposit(toWad(7000 * 2), { from: u2 });
-            await amm.buyAndWithdraw(toWad(0), toWad('10000'), infinity, toWad(7000 * 2), { from: u2 });
-            assert.equal(fromWad(await cashBalanceOf(u2)), '0'); // -7777.777777777777777777
-            assert.equal(fromWad(await positionSize(u2)), 0);
-            assert.equal(await positionSide(u2), Side.FLAT);
         });
 
         // TODO: buy - success - amount is very close to amm.positionSize
@@ -691,211 +514,6 @@ contract('amm', accounts => {
                 from: u2
             });
         });
-
-        it("sell - success", async () => {
-            // sell 1, entryPrice will be 70000 / (10 + 1) = 6363 but markPrice is still 7000.
-            // pnl = -636, positionMargin = 636
-            await perpetual.deposit(toWad(2000), {
-                from: u2
-            });
-            await amm.sell(toWad(1), toWad(0), infinity, {
-                from: u2
-            });
-
-            assert.equal(fromWad(await amm.positionSize()), 11);
-            assert.equal(fromWad(await positionSize(proxy.address)), 11);
-            assert.equal(fromWad(await positionSize(u1)), 10);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u1), Side.SHORT);
-            assert.equal(await positionSide(u2), Side.SHORT);
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), '1904.545454545454545454');
-            assert.equal(fromWad(await share.balanceOf(u2)), 0);
-            assert.equal(fromWad(await positionEntryValue(u2)), '6363.636363636363636364'); // trade price * position
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), '-636.363636363636363637');
-
-            assert.equal(fromWad(await amm.currentAvailableMargin.call()), 63700); // amm.x
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), '140063.636363636363636364');
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), '76363.636363636363636364');
-            assert.equal(fromWad(await amm.currentFairPrice.call()), '5790.909090909090909091');
-        });
-
-        it("buy and sell - success", async () => {
-            await perpetual.deposit(toWad(7000), {
-                from: u2
-            });
-            await amm.buy(toWad(1), toWad('8100'), infinity, {
-                from: u2
-            });
-            assert.equal(fromWad(await amm.positionSize()), 9);
-            assert.equal(fromWad(await positionSize(proxy.address)), 9);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u2), Side.LONG);
-            assert.equal(fromWad(await cashBalanceOf(u2)), '6883.333333333333333333');
-            assert.equal(fromWad(await positionEntryValue(u2)), '7777.777777777777777778');
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), '-777.777777777777777779');
-
-            assert.equal(fromWad(await amm.currentAvailableMargin.call()), '77855.555555555555555555'); // amm.x
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), '140855.555555555555555555');
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), '63000');
-            assert.equal(fromWad(await amm.currentFairPrice.call()), '8650.617283950617283951');
-
-            await amm.sell(toWad(2), toWad(0), infinity, {
-                from: u2
-            });
-
-            assert.equal(fromWad(await amm.positionSize()), 11);
-            assert.equal(fromWad(await positionSize(proxy.address)), 11);
-            assert.equal(fromWad(await positionSize(u1)), 10);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u1), Side.SHORT);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await cashBalanceOf(u2)), '5970.999999999999999998');
-            assert.equal(fromWad(await positionEntryValue(u2)), '7077.777777777777777778');
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), '77.777777777777777777');
-
-            assert.equal(fromWad(await amm.currentAvailableMargin.call()), '63841.555555555555555555'); // amm.x
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), '140997.111111111111111111');
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), '77155.555555555555555556');
-            assert.equal(fromWad(await amm.currentFairPrice.call()), '5803.777777777777777778');
-        });
-
-        it("sell - success - large amount", async () => {
-            await collateral.transfer(u2, toWad(7000 * 100000));
-            await perpetual.deposit(toWad(7000 * 100000), {
-                from: u2
-            });
-
-            await amm.sell(toWad(50000), toWad(0), infinity, {
-                from: u2
-            });
-
-            assert.equal(fromWad(await amm.positionSize()), 50010);
-            assert.equal(fromWad(await positionSize(proxy.address)), 50010);
-            assert.equal(fromWad(await positionSize(u1)), 10);
-            assert.equal(fromWad(await positionSize(u2)), 50000);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(await positionSide(u1), Side.SHORT);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await cashBalanceOf(u2)), '699998950.20995800839832');
-            assert.equal(fromWad(await positionEntryValue(u2)), '69986.002799440112');
-            assert.equal(fromWad(await perpetual.pnl.call(u2)), -349930013.997200559888 - 1e-18);
-
-            assert.equal(fromWad(await amm.currentAvailableMargin.call()), '713.85722855428912'); // amm.x
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), '140699.86002799440112');
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), '139986.002799440112');
-            assert.equal(fromWad(await amm.currentFairPrice.call()), '0.014274289713143154');
-        });
-
-        it("sell - fail - deadline", async () => {
-            await perpetual.deposit(toWad(11000 * 0.1), {
-                from: u2
-            });
-            const t1 = (await amm.mockBlockTimestamp()).toNumber();
-            await amm.setBlockTimestamp(t1 + 600);
-            try {
-                await amm.sell(toWad(1), toWad(0), t1 + 100, {
-                    from: u2
-                });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("deadline"), error);
-            }
-        });
-
-        it('addLiquidity - fail - no marginBalance', async () => {
-            try {
-                await amm.addLiquidity(toWad(1), {
-                    from: u2
-                });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("im unsafe"), error);
-            }
-        });
-
-        it('addLiquidity - fail - unsafe', async () => {
-            try {
-                await perpetual.deposit(toWad(7000 * 2), {
-                    from: u2
-                });
-                await amm.addLiquidity(toWad(1), {
-                    from: u2
-                });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("im unsafe"), error);
-            }
-        });
-
-        it("addLiquidity - success", async () => {
-            await perpetual.deposit(toWad(7000 * 3), {
-                from: u2
-            });
-            await amm.addLiquidity(toWad(1), {
-                from: u2
-            });
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), 7000);
-            assert.equal(fromWad(await share.balanceOf(u2)), 1);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 7000);
-
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), 154000); // 7000 * 2 * 10 when createPool + 7000 * 2 this time
-            assert.equal(fromWad(await positionSize(proxy.address)), 11);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), 77000);
-        });
-
-        it("depositAndAddLiquidity - success", async () => {
-            await amm.depositAndAddLiquidity(toWad(7000 * 3), toWad(1), { from: u2 });
-
-            assert.equal(fromWad(await cashBalanceOf(u2)), 7000);
-            assert.equal(fromWad(await share.balanceOf(u2)), 1);
-            assert.equal(fromWad(await positionSize(u2)), 1);
-            assert.equal(await positionSide(u2), Side.SHORT);
-            assert.equal(fromWad(await positionEntryValue(u2)), 7000);
-
-            assert.equal(fromWad(await cashBalanceOf(proxy.address)), 154000); // 7000 * 2 * 10 when createPool + 7000 * 2 this time
-            assert.equal(fromWad(await positionSize(proxy.address)), 11);
-            assert.equal(await positionSide(proxy.address), Side.LONG);
-            assert.equal(fromWad(await positionEntryValue(proxy.address)), 77000);
-        });
-
-        it('removeLiquidity - fail - shareBalance limited', async () => {
-            try {
-                await amm.removeLiquidity(toWad(1), {
-                    from: u2
-                });
-                throw null;
-            } catch (error) {
-                assert.ok(error.message.includes("shareBalance too low"), error);
-            }
-        });
-
-        it("updateIndex", async () => {
-            await perpetual.deposit(toWad(7000), {
-                from: dev
-            });
-
-            //index price not change
-            await amm.updateIndex({
-                from: u2
-            });
-            assert.equal(fromWad(await cashBalanceOf(u2)), 0);
-
-            //index price changed, updatePremiumPrize = 1 * 10**18
-            await setIndexPrice(8000);
-            await amm.updateIndex({
-                from: u2
-            });
-            assert.equal(fromWad(await cashBalanceOf(u2)), 1);
-        });
-    });
 
     describe("funding", async () => {
         beforeEach(async () => {
