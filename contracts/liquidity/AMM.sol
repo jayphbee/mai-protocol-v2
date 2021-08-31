@@ -43,7 +43,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FundingState.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastFundingState() public view returns (LibTypes.FundingState memory) {
@@ -53,7 +53,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FairPrice.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastFairPrice() internal view returns (uint256) {
@@ -63,7 +63,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice Premium.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastPremium() internal view returns (int256) {
@@ -73,7 +73,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice EMAPremium.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastEMAPremium() internal view returns (int256) {
@@ -83,7 +83,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice MarkPrice.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastMarkPrice() internal view returns (uint256) {
@@ -98,7 +98,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice PremiumRate.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastPremiumRate() internal view returns (int256) {
@@ -111,7 +111,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FundingRate.
      *
-     * Note: last* functions (lastFundingState, lastAvailableMargin, lastFairPrice, etc.) are calculated based on
+     * Note: last* functions (lastFundingState, lastFairPrice, etc.) are calculated based on
      *       the on-chain fundingState. current* functions are calculated based on the current timestamp.
      */
     function lastFundingRate() public view returns (int256) {
@@ -124,7 +124,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FundingState.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentFundingState() public returns (LibTypes.FundingState memory) {
@@ -135,7 +135,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FairPrice.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentFairPrice() public returns (uint256) {
@@ -146,7 +146,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice Premium.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentPremium() public returns (int256) {
@@ -157,7 +157,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice MarkPrice.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentMarkPrice() public returns (uint256) {
@@ -168,7 +168,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice PremiumRate.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentPremiumRate() public returns (int256) {
@@ -179,7 +179,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice FundingRate.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentFundingRate() public returns (int256) {
@@ -190,7 +190,7 @@ contract AMM is AMMGovernance {
     /**
      * @notice AccumulatedFundingPerContract.
      *
-     * Note: current* functions (currentFundingState, currentAvailableMargin, currentFairPrice, etc.) are calculated based on
+     * Note: current* functions (currentFundingState, currentFairPrice, etc.) are calculated based on
      *       the current timestamp. current* functions are calculated based on the on-chain fundingState.
      */
     function currentAccumulatedFundingPerContract() public returns (int256) {

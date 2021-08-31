@@ -33,7 +33,6 @@ contract Exchange {
         LibOrder.OrderParam makerOrderParam,
         uint256 amount
     );
-    event MatchWithAMM(address perpetual, LibOrder.OrderParam takerOrderParam, uint256 amount);
     event Cancel(bytes32 indexed orderHash);
     event ActivateReferral(address indexed referrer, address indexed referree);
 
